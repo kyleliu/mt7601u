@@ -84,7 +84,7 @@ static inline int mt7601u_dma_skb_wrap(struct sk_buff *skb,
 		MT76_SET(MT_TXD_INFO_TYPE, type);
 
 	put_unaligned_le32(info, skb_push(skb, sizeof(info)));
-	return skb_put_padto(skb, round_up(skb->len, 4) + 4);
+	return skb_padto(skb, round_up(skb->len, 4) + 4);
 }
 
 static inline int

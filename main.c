@@ -17,9 +17,9 @@
 #include <linux/etherdevice.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
-#error Your kernel is too old, please upgrade to at least 3.19
-#endif
+// #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+// #error Your kernel is too old, please upgrade to at least 3.19
+// #endif
 
 static int mt7601u_start(struct ieee80211_hw *hw)
 {
@@ -272,9 +272,7 @@ mt7601u_sta_notify(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 }
 
 static void
-mt7601u_sw_scan(struct ieee80211_hw *hw,
-		struct ieee80211_vif *vif,
-		const u8 *mac_addr)
+mt7601u_sw_scan(struct ieee80211_hw *hw)
 {
 	struct mt7601u_dev *dev = hw->priv;
 
@@ -283,8 +281,7 @@ mt7601u_sw_scan(struct ieee80211_hw *hw,
 }
 
 static void
-mt7601u_sw_scan_complete(struct ieee80211_hw *hw,
-			 struct ieee80211_vif *vif)
+mt7601u_sw_scan_complete(struct ieee80211_hw *hw)
 {
 	struct mt7601u_dev *dev = hw->priv;
 
@@ -372,6 +369,7 @@ mt76_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	return 0;
 }
 
+#if 0
 static void
 mt76_sta_rate_tbl_update(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			 struct ieee80211_sta *sta)
@@ -394,6 +392,7 @@ mt76_sta_rate_tbl_update(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 out:
 	rcu_read_unlock();
 }
+#endif
 
 const struct ieee80211_ops mt7601u_ops = {
 	.tx = mt7601u_tx,
@@ -413,6 +412,6 @@ const struct ieee80211_ops mt7601u_ops = {
 	.sw_scan_complete = mt7601u_sw_scan_complete,
 /*	.flush = mt7601u_flush,*/
 	.ampdu_action = mt76_ampdu_action,
-	.sta_rate_tbl_update = mt76_sta_rate_tbl_update,
+	// .sta_rate_tbl_update = mt76_sta_rate_tbl_update,
 	.set_rts_threshold = mt7601u_set_rts_threshold,
 };

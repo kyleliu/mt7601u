@@ -122,14 +122,14 @@ static const struct mt76_reg_pair mac_common_vals[] = {
 	{ MT_TX_SW_CFG1,		0x00080606 },
 	{ MT_TX_LINK_CFG,		0x00001020 },
 	{ MT_TX_TIMEOUT_CFG,		0x000a2090 },
-	{ MT_MAX_LEN_CFG,		0x00003fff },
-	{ MT_PBF_TX_MAX_PCNT,		0x1fbf1f1f },
+	{ MT_MAX_LEN_CFG,		0x00001f00 },
+	{ MT_PBF_TX_MAX_PCNT,		0x1F3FBF9F },
 	{ MT_PBF_RX_MAX_PCNT,		0x0000009f },
 	{ MT_TX_RETRY_CFG,		0x47d01f0f },
 	{ MT_AUTO_RSP_CFG,		0x00000013 },
 	{ MT_CCK_PROT_CFG,		0x05740003 },
 	{ MT_OFDM_PROT_CFG,		0x05740003 },
-	{ MT_MM40_PROT_CFG,		0x03f44084 },
+	{ MT_MM40_PROT_CFG,		0x03F44084 },
 	{ MT_GF20_PROT_CFG,		0x01744004 },
 	{ MT_GF40_PROT_CFG,		0x03f44084 },
 	{ MT_MM20_PROT_CFG,		0x01744004 },
@@ -139,6 +139,10 @@ static const struct mt76_reg_pair mac_common_vals[] = {
 	{ MT_TXOP_HLDR_ET,		0x00000002 },
 	{ MT_XIFS_TIME_CFG,		0x33a41010 },
 	{ MT_PWR_PIN_CFG,		0x00000000 },
+	{ MT_AMPDU_MAX_LEN_20M1S,		0x66655443},
+	{ MT_AMPDU_MAX_LEN_20M2S,		0x77766554},
+	{ MT_AMPDU_MAX_LEN_40M1S,		0x77766554},
+	{ MT_AMPDU_MAX_LEN_40M2S,		0x77777665},
 };
 
 static const struct mt76_reg_pair mac_chip_vals[] = {

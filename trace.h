@@ -257,28 +257,52 @@ TRACE_EVENT(mt_rx,
 	TP_ARGS(dev, rxwi, f),
 	TP_STRUCT__entry(
 		DEV_ENTRY
-		__field_struct(struct mt7601u_rxwi, rxwi)
+		__field(__le32, rxinfo)
+		__field(__le32, ctl)
+		__field(__le16, frag_sn)
+		__field(__le16, rate)
+		__field(u8, unknown)
+		__array(u8, zero, 3)
+		__field(u8, snr)
+		__field(u8, ant)
+		__field(u8, gain)
+		__field(u8, freq_off)
+		__field(__le32, resv2)
+		__field(__le32, expert_ant)
 		__field(u32, fce_info)
 	),
 	TP_fast_assign(
 		DEV_ASSIGN;
-		__entry->rxwi = *rxwi;
+		__entry->rxinfo = rxwi->rxinfo;
+		__entry->ctl = rxwi->ctl;
+		__entry->frag_sn = rxwi->frag_sn;
+		__entry->rate = rxwi->rate;
+		__entry->unknown = rxwi->unknown;
+		__entry->zero[0] = rxwi->zero[0];
+		__entry->zero[1] = rxwi->zero[1];
+		__entry->zero[2] = rxwi->zero[2];
+		__entry->snr = rxwi->snr;
+		__entry->ant = rxwi->ant;
+		__entry->gain = rxwi->gain;
+		__entry->freq_off = rxwi->freq_off;
+		__entry->resv2 = rxwi->resv2;
+		__entry->expert_ant = rxwi->expert_ant;
 		__entry->fce_info = f;
 	),
 	TP_printk(DEV_PR_FMT "rxi:%08x ctl:%08x frag_sn:%04hx rate:%04hx "
 		  "uknw:%02hhx z:%02hhx%02hhx%02hhx snr:%02hhx "
 		  "ant:%02hhx gain:%02hhx freq_o:%02hhx "
 		  "r:%08x ea:%08x fce:%08x", DEV_PR_ARG,
-		  le32_to_cpu(__entry->rxwi.rxinfo),
-		  le32_to_cpu(__entry->rxwi.ctl),
-		  le16_to_cpu(__entry->rxwi.frag_sn),
-		  le16_to_cpu(__entry->rxwi.rate),
-		  __entry->rxwi.unknown,
-		  __entry->rxwi.zero[0], __entry->rxwi.zero[1],
-		  __entry->rxwi.zero[2],
-		  __entry->rxwi.snr, __entry->rxwi.ant,
-		  __entry->rxwi.gain, __entry->rxwi.freq_off,
-		  __entry->rxwi.resv2, __entry->rxwi.expert_ant,
+		  le32_to_cpu(__entry->rxinfo),
+		  le32_to_cpu(__entry->ctl),
+		  le16_to_cpu(__entry->frag_sn),
+		  le16_to_cpu(__entry->rate),
+		  __entry->unknown,
+		  __entry->zero[0], __entry->zero[1],
+		  __entry->zero[2],
+		  __entry->snr, __entry->ant,
+		  __entry->gain, __entry->freq_off,
+		  __entry->resv2, __entry->expert_ant,
 		  __entry->fce_info)
 );
 
@@ -288,23 +312,41 @@ TRACE_EVENT(mt_tx,
 	TP_ARGS(dev, skb, sta, h),
 	TP_STRUCT__entry(
 		DEV_ENTRY
-		__field_struct(struct mt76_txwi, h)
+		__field(__le16, flags)
+		__field(__le16, rate_ctl)
+		__field(u8, ack_ctl)
+		__field(u8, wcid)
+		__field(__le16, len_ctl)
+		__field(__le32, iv)
+		__field(__le32, eiv)
+		__field(u8, aid)
+		__field(u8, txstream)
+		__field(__le16, ctl)
 		__field(struct sk_buff *, skb)
 		__field(struct mt76_sta *, sta)
 	),
 	TP_fast_assign(
 		DEV_ASSIGN;
-		__entry->h = *h;
+		__entry->flags = h->flags;
+		__entry->rate_ctl = h->rate_ctl;
+		__entry->ack_ctl = h->ack_ctl;
+		__entry->wcid = h->wcid;
+		__entry->len_ctl = h->len_ctl;
+		__entry->iv = h->iv;
+		__entry->eiv = h->eiv;
+		__entry->aid = h->aid;
+		__entry->txstream = h->txstream;
+		__entry->ctl = h->ctl;
 		__entry->skb = skb;
 		__entry->sta = sta;
 	),
 	TP_printk(DEV_PR_FMT "skb:%p sta:%p  flg:%04hx rate_ctl:%04hx "
 		  "ack:%02hhx wcid:%02hhx len_ctl:%05hx", DEV_PR_ARG,
 		  __entry->skb, __entry->sta,
-		  le16_to_cpu(__entry->h.flags),
-		  le16_to_cpu(__entry->h.rate_ctl),
-		  __entry->h.ack_ctl, __entry->h.wcid,
-		  le16_to_cpu(__entry->h.len_ctl))
+		  le16_to_cpu(__entry->flags),
+		  le16_to_cpu(__entry->rate_ctl),
+		  __entry->ack_ctl, __entry->wcid,
+		  le16_to_cpu(__entry->len_ctl))
 );
 
 TRACE_EVENT(mt_tx_dma_done,

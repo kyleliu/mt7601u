@@ -116,12 +116,19 @@ static void mt7601u_init_usb_dma(struct mt7601u_dev *dev)
 	      MT_USB_DMA_CFG_TX_BULK_EN;
 	if (dev->in_max_packet == 512)
 		val |= MT_USB_DMA_CFG_RX_BULK_AGG_EN;
+	printk("--> MT_USB_DMA_CFG: 0x%X\n", val);
 	mt7601u_wr(dev, MT_USB_DMA_CFG, val);
 
 	val |= MT_USB_DMA_CFG_UDMA_RX_WL_DROP;
 	mt7601u_wr(dev, MT_USB_DMA_CFG, val);
 	val &= ~MT_USB_DMA_CFG_UDMA_RX_WL_DROP;
 	mt7601u_wr(dev, MT_USB_DMA_CFG, val);
+
+	printk("--> MT_USB_DMA_CFG: 0x%X\n", val);
+
+	val = mt7601u_rr(dev, MT_USB_DMA_CFG);
+
+	printk("--> MT_USB_DMA_CFG: 0x%X\n", val);
 }
 
 static int mt7601u_init_bbp(struct mt7601u_dev *dev)
@@ -172,6 +179,13 @@ static int mt7601u_write_mac_initvals(struct mt7601u_dev *dev)
 		return ret;
 
 	mt76_init_beacon_offsets(dev);
+
+	{
+	/* Release BBP and MAC reset MT_MAC_SYS_CTRL[1:0] = 0x0 */
+	u32 val = mt7601u_rr(dev, MT_MAC_SYS_CTRL);
+	val &= ~(0x3);
+	mt7601u_wr(dev, MT_MAC_SYS_CTRL, val);
+	}
 
 	mt7601u_wr(dev, MT_AUX_CLK_CFG, 0);
 
@@ -336,7 +350,7 @@ int mt7601u_init_hardware(struct mt7601u_dev *dev)
 
 	dev->beacon_offsets = beacon_offsets;
 
-	mt7601u_chip_onoff(dev, true, false);
+	mt7601u_chip_onoff(dev, true, true);
 
 	ret = mt7601u_wait_asic_ready(dev);
 	if (ret)
@@ -532,9 +546,11 @@ mt76_init_sband(struct mt7601u_dev *dev, struct ieee80211_supported_band *sband,
 	int size;
 
 	size = n_chan * sizeof(*chan);
-	chanlist = devm_kmemdup(dev->dev, chan, size, GFP_KERNEL);
+	chanlist = devm_kzalloc(dev->dev, size, GFP_KERNEL);
 	if (!chanlist)
 		return -ENOMEM;
+
+	memcpy(chanlist, chan, size);
 
 	sband->channels = chanlist;
 	sband->n_channels = n_chan;
@@ -588,7 +604,7 @@ int mt7601u_register_device(struct mt7601u_dev *dev)
 	dev->wcid_mask[0] |= 1;
 
 	/* init fake wcid for monitor interfaces */
-	dev->mon_wcid = devm_kmalloc(dev->dev, sizeof(*dev->mon_wcid),
+	dev->mon_wcid = devm_kzalloc(dev->dev, sizeof(*dev->mon_wcid),
 				     GFP_KERNEL);
 	if (!dev->mon_wcid)
 		return -ENOMEM;
@@ -604,7 +620,7 @@ int mt7601u_register_device(struct mt7601u_dev *dev)
 	hw->queues = 4;
 	ieee80211_hw_set(hw, SIGNAL_DBM);
 	ieee80211_hw_set(hw, PS_NULLFUNC_STACK);
-	ieee80211_hw_set(hw, SUPPORTS_HT_CCK_RATES);
+	// ieee80211_hw_set(hw, SUPPORTS_HT_CCK_RATES);
 	ieee80211_hw_set(hw, AMPDU_AGGREGATION);
 #ifdef MAC80211_IS_PATCHED
 	ieee80211_hw_set(hw, TX_STATS_EVERY_MPDU);
@@ -619,7 +635,7 @@ int mt7601u_register_device(struct mt7601u_dev *dev)
 
 	SET_IEEE80211_PERM_ADDR(hw, dev->macaddr);
 
-	wiphy->features |= NL80211_FEATURE_ACTIVE_MONITOR;
+	// wiphy->features |= NL80211_FEATURE_ACTIVE_MONITOR;
 	wiphy->interface_modes = BIT(NL80211_IFTYPE_STATION);
 
 	ret = mt76_init_sband_2g(dev);

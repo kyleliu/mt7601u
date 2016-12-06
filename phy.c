@@ -399,7 +399,7 @@ static int __mt7601u_phy_set_channel(struct mt7601u_dev *dev,
 	}
 
 	if (bw != dev->bw || chan_ext_below != dev->chan_ext_below) {
-		dev_dbg(dev->dev, "Info: switching HT mode bw:%d below:%d\n",
+		dev_info(dev->dev, "Info: switching HT mode bw:%d below:%d\n",
 			bw, chan_ext_below);
 
 		mt7601u_bbp_set_bw(dev, bw);
@@ -592,7 +592,9 @@ static void mt7601u_rxdc_cal(struct mt7601u_dev *dev)
 
 void mt7601u_phy_recalibrate_after_assoc(struct mt7601u_dev *dev)
 {
+#ifdef DPD_CALIBRATION_SUPPORT
 	mt7601u_mcu_calibrate(dev, MCU_CAL_DPD, dev->curr_temp);
+#endif
 
 	mt7601u_rxdc_cal(dev);
 }
@@ -700,7 +702,7 @@ static void mt7601u_tssi_dc_gain_cal(struct mt7601u_dev *dev)
 	dev->tssi_init_hvga = res[2];
 	dev->tssi_init_hvga_offset_db = tssi_init_hvga_db - tssi_init_db;
 
-	dev_dbg(dev->dev,
+	dev_info(dev->dev,
 		"TSSI_init:%hhx db:%hx hvga:%hhx hvga_db:%hx off_db:%hx\n",
 		dev->tssi_init, tssi_init_db, dev->tssi_init_hvga,
 		tssi_init_hvga_db, dev->tssi_init_hvga_offset_db);
@@ -724,22 +726,27 @@ static void mt7601u_tssi_dc_gain_cal(struct mt7601u_dev *dev)
 
 static int mt7601u_temp_comp(struct mt7601u_dev *dev, bool on)
 {
-	int ret, temp, hi_temp = 400, lo_temp = -200;
+	int temp, hi_temp = 400, lo_temp = -200;
 
 	temp = (dev->raw_temp - dev->ee->ref_temp) * MT_EE_TEMPERATURE_SLOPE;
 	dev->curr_temp = temp;
 
 	/* DPD Calibration */
 	if (temp - dev->dpd_temp > 450 || temp - dev->dpd_temp < -450) {
+#ifdef DPD_CALIBRATION_SUPPORT
+		int ret;
+#endif
 		dev->dpd_temp = temp;
 
+#ifdef DPD_CALIBRATION_SUPPORT
 		ret = mt7601u_mcu_calibrate(dev, MCU_CAL_DPD, dev->dpd_temp);
 		if (ret)
 			return ret;
+#endif
 
 		mt7601u_vco_cal(dev);
 
-		dev_dbg(dev->dev, "Recalibrate DPD\n");
+		dev_info(dev->dev, "Recalibrate DPD\n");
 	}
 
 	/* PLL Lock Protect */
@@ -749,14 +756,14 @@ static int mt7601u_temp_comp(struct mt7601u_dev *dev, bool on)
 		mt7601u_rf_wr(dev, 4, 4, 6);
 		mt7601u_rf_clear(dev, 4, 10, 0x30);
 
-		dev_dbg(dev->dev, "PLL lock protect on - too cold\n");
+		dev_info(dev->dev, "PLL lock protect on - too cold\n");
 	} else if (temp > 50 && dev->pll_lock_protect) { /* > 30C */
 		dev->pll_lock_protect = false;
 
 		mt7601u_rf_wr(dev, 4, 4, 0);
 		mt7601u_rf_rmw(dev, 4, 10, 0x30, 0x10);
 
-		dev_dbg(dev->dev, "PLL lock protect off\n");
+		dev_info(dev->dev, "PLL lock protect off\n");
 	}
 
 	if (on) {
@@ -846,7 +853,7 @@ mt7601u_tssi_params_get(struct mt7601u_dev *dev)
 
 	p.trgt_power <<= 12;
 
-	dev_dbg(dev->dev, "tx_rate:%02hhx pwr:%08x\n", tx_rate, p.trgt_power);
+	dev_info(dev->dev, "tx_rate:%02hhx pwr:%08x\n", tx_rate, p.trgt_power);
 
 	p.trgt_power += mt7601u_phy_rf_pa_mode_val(dev, pkt_type & 0x03,
 						   tx_rate);
@@ -863,7 +870,7 @@ mt7601u_tssi_params_get(struct mt7601u_dev *dev)
 
 	p.trgt_power += dev->ee->tssi_data.tx0_delta_offset;
 
-	dev_dbg(dev->dev,
+	dev_info(dev->dev,
 		"tssi:%02hhx t_power:%08x temp:%02hhx pkt_type:%02hhx\n",
 		p.tssi0, p.trgt_power, dev->raw_temp, pkt_type);
 
@@ -900,7 +907,7 @@ static int mt7601u_tssi_cal(struct mt7601u_dev *dev)
 	tssi_init = (hvga ? dev->tssi_init_hvga : dev->tssi_init);
 	tssi_m_dc = params.tssi0 - tssi_init;
 	tssi_db = lin2dBd(tssi_m_dc);
-	dev_dbg(dev->dev, "tssi dc:%04hx db:%04hx hvga:%d\n",
+	dev_info(dev->dev, "tssi dc:%04hx db:%04hx hvga:%d\n",
 		tssi_m_dc, tssi_db, hvga);
 
 	if (dev->chandef.chan->hw_value < 5)
@@ -915,7 +922,7 @@ static int mt7601u_tssi_cal(struct mt7601u_dev *dev)
 
 	curr_pwr = tssi_db * dev->ee->tssi_data.slope + (tssi_offset << 9);
 	diff_pwr = params.trgt_power - curr_pwr;
-	dev_dbg(dev->dev, "Power curr:%08x diff:%08x\n", curr_pwr, diff_pwr);
+	dev_info(dev->dev, "Power curr:%08x diff:%08x\n", curr_pwr, diff_pwr);
 
 	if (params.tssi0 > 126 && diff_pwr > 0) {
 		dev_err(dev->dev, "Error: TSSI upper saturation\n");
@@ -936,7 +943,7 @@ static int mt7601u_tssi_cal(struct mt7601u_dev *dev)
 	diff_pwr += (diff_pwr > 0) ? 2048 : -2048;
 	diff_pwr /= 4096;
 
-	dev_dbg(dev->dev, "final diff: %08x\n", diff_pwr);
+	dev_info(dev->dev, "final diff: %08x\n", diff_pwr);
 
 	val = mt7601u_rr(dev, MT_TX_ALC_CFG_1);
 	curr_pwr = s6_to_int(MT76_GET(MT_TX_ALC_CFG_1_TEMP_COMP, val));
@@ -1090,6 +1097,29 @@ static void mt7601u_phy_freq_cal(struct work_struct *work)
 	spin_unlock_bh(&dev->con_mon_lock);
 }
 
+
+/**
+  * ether_addr_copy - Copy an Ethernet address
+  * @dst: Pointer to a six-byte array Ethernet address destination
+  * @src: Pointer to a six-byte array Ethernet address source
+  *
+  * Please note: dst & src must both be aligned to u16.
+  */
+static inline void ether_addr_copy(u8 *dst, const u8 *src)
+{
+#if defined(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS)
+    *(u32 *)dst = *(const u32 *)src;
+    *(u16 *)(dst + 4) = *(const u16 *)(src + 4);
+#else
+    u16 *a = (u16 *)dst;
+    const u16 *b = (const u16 *)src;
+
+    a[0] = b[0];
+    a[1] = b[1];
+    a[2] = b[2];
+#endif
+}
+
 void mt7601u_phy_con_cal_onoff(struct mt7601u_dev *dev,
 			       struct ieee80211_bss_conf *info)
 {
@@ -1155,9 +1185,11 @@ static int mt7601u_init_cal(struct mt7601u_dev *dev)
 	ret = mt7601u_mcu_calibrate(dev, MCU_CAL_RXIQ, 0);
 	if (ret)
 		return ret;
+#ifdef DPD_CALIBRATION_SUPPORT
 	ret = mt7601u_mcu_calibrate(dev, MCU_CAL_DPD, dev->dpd_temp);
 	if (ret)
 		return ret;
+#endif
 
 	mt7601u_rxdc_cal(dev);
 

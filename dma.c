@@ -102,9 +102,9 @@ static void mt7601u_rx_process_seg(struct mt7601u_dev *dev, u8 *data,
 	seg_len -= sizeof(struct mt7601u_rxwi);
 
 	if (unlikely(rxwi->zero[0] || rxwi->zero[1] || rxwi->zero[2]))
-		dev_err_once(dev->dev, "Error: RXWI zero fields are set\n");
+		dev_info(dev->dev, "Error: RXWI zero fields are set\n");
 	if (unlikely(MT76_GET(MT_RXD_INFO_TYPE, fce_info)))
-		dev_err_once(dev->dev, "Error: RX path seen a non-pkt urb\n");
+		dev_info(dev->dev, "Error: RX path seen a non-pkt urb\n");
 
 	trace_mt_rx(dev, rxwi, fce_info);
 
@@ -130,6 +130,26 @@ static u16 mt7601u_rx_next_seg_len(u8 *data, u32 data_len)
 		return 0;
 
 	return MT_DMA_HDRS + dma_len;
+}
+
+static inline struct page *__dev_alloc_pages(gfp_t gfp_mask,
+                                             unsigned int order)
+{
+	/* This piece of code contains several assumptions.
+	 * 1.  This is for device Rx, therefor a cold page is preferred.
+	 * 2.  The expectation is the user wants a compound page.
+	 * 3.  If requesting a order 0 page it will not be compound
+	 *     due to the check to see if order has a value in prep_new_page
+	 * 4.  __GFP_MEMALLOC is ignored if __GFP_NOMEMALLOC is set due to
+	 *     code in gfp_to_alloc_flags that should be enforcing this.
+	 */
+	gfp_mask |= __GFP_COLD | __GFP_COMP | __GFP_MEMALLOC;
+
+	return alloc_pages_node(NUMA_NO_NODE, gfp_mask, order);
+}
+
+static inline struct page *dev_alloc_pages(unsigned int order) {
+	return __dev_alloc_pages(GFP_ATOMIC | __GFP_NOWARN, order);
 }
 
 static void
@@ -228,6 +248,9 @@ static void mt7601u_complete_tx(struct urb *urb)
 	struct sk_buff *skb;
 	unsigned long flags;
 
+	printk("---> E %s(): q->start=%d, q->used=%d\n",
+		__func__, q->start, q->used);
+
 	spin_lock_irqsave(&dev->tx_lock, flags);
 
 	if (mt7601u_urb_has_error(urb))
@@ -248,6 +271,9 @@ static void mt7601u_complete_tx(struct urb *urb)
 	q->used--;
 out:
 	spin_unlock_irqrestore(&dev->tx_lock, flags);
+
+	printk("---> X %s(): q->start=%d, q->used=%d\n",
+		__func__, q->start, q->used);
 }
 
 static void mt7601u_tx_tasklet(unsigned long data)
@@ -255,6 +281,8 @@ static void mt7601u_tx_tasklet(unsigned long data)
 	struct mt7601u_dev *dev = (struct mt7601u_dev *) data;
 	struct sk_buff_head skbs;
 	unsigned long flags;
+
+	printk("--> E %s\n", __func__);
 
 	__skb_queue_head_init(&skbs);
 
@@ -274,6 +302,8 @@ static void mt7601u_tx_tasklet(unsigned long data)
 
 		mt7601u_tx_status(dev, skb);
 	}
+
+	printk("--> X %s\n", __func__);
 }
 
 static int mt7601u_dma_submit_tx(struct mt7601u_dev *dev,
@@ -285,6 +315,9 @@ static int mt7601u_dma_submit_tx(struct mt7601u_dev *dev,
 	struct mt7601u_tx_queue *q = &dev->tx_q[ep];
 	unsigned long flags;
 	int ret;
+
+	printk("--> %s: ep=%d, q->start=%d, q->end=%d\n", 
+		__func__, dev->out_eps[ep], q->start, q->end);
 
 	spin_lock_irqsave(&dev->tx_lock, flags);
 
@@ -482,8 +515,8 @@ static int mt7601u_alloc_tx(struct mt7601u_dev *dev)
 {
 	int i;
 
-	dev->tx_q = devm_kcalloc(dev->dev, __MT_EP_OUT_MAX,
-				 sizeof(*dev->tx_q), GFP_KERNEL);
+	dev->tx_q = devm_kzalloc(dev->dev,
+		__MT_EP_OUT_MAX * sizeof(*dev->tx_q), GFP_KERNEL | __GFP_ZERO);
 
 	for (i = 0; i < __MT_EP_OUT_MAX; i++)
 		if (mt7601u_alloc_tx_queue(dev, &dev->tx_q[i]))

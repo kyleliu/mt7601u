@@ -264,7 +264,7 @@ static int mt7601u_probe(struct usb_interface *usb_intf,
 
 	usb_set_intfdata(usb_intf, dev);
 
-	dev->vend_buf = devm_kmalloc(dev->dev, MT_VEND_BUF, GFP_KERNEL);
+	dev->vend_buf = devm_kzalloc(dev->dev, MT_VEND_BUF, GFP_KERNEL);
 	if (!dev->vend_buf) {
 		ret = -ENOMEM;
 		goto err;

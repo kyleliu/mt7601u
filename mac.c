@@ -174,6 +174,8 @@ void mt76_send_tx_status(struct mt7601u_dev *dev, struct mt76_tx_status *stat)
 	struct mt76_wcid *wcid = NULL;
 	void *msta;
 
+	printk("--> %s()\n", __func__);
+
 	rcu_read_lock();
 	if (stat->wcid < ARRAY_SIZE(dev->wcid))
 		wcid = rcu_dereference(dev->wcid[stat->wcid]);
@@ -186,9 +188,11 @@ void mt76_send_tx_status(struct mt7601u_dev *dev, struct mt76_tx_status *stat)
 
 	mt76_mac_fill_tx_status(dev, &info, stat);
 
+#if 0
 	spin_lock_bh(&dev->mac_lock);
 	ieee80211_tx_status_noskb(dev->hw, sta, &info);
 	spin_unlock_bh(&dev->mac_lock);
+#endif
 
 	rcu_read_unlock();
 }
@@ -428,8 +432,8 @@ mt76_mac_process_rate(struct ieee80211_rx_status *status, u16 rate)
 	if (rate & MT_RXWI_RATE_SGI)
 		status->flag |= RX_FLAG_SHORT_GI;
 
-	if (rate & MT_RXWI_RATE_STBC)
-		status->flag |= 1 << RX_FLAG_STBC_SHIFT;
+	// if (rate & MT_RXWI_RATE_STBC)
+	// 	status->flag |= 1 << RX_FLAG_STBC_SHIFT;
 
 	if (rate & MT_RXWI_RATE_BW)
 		status->flag |= RX_FLAG_40MHZ;
@@ -471,9 +475,9 @@ u32 mt76_mac_process_rx(struct mt7601u_dev *dev, struct sk_buff *skb,
 		status->flag |= RX_FLAG_IV_STRIPPED | RX_FLAG_MMIC_STRIPPED;
 	}
 
-	status->chains = BIT(0);
+	// status->chains = BIT(0);
 	rssi = mt7601u_phy_get_rssi(dev, rxwi, rate);
-	status->chain_signal[0] = status->signal = rssi;
+	status->signal = rssi;
 	status->freq = dev->chandef.chan->center_freq;
 	status->band = dev->chandef.chan->band;
 

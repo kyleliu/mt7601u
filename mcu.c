@@ -370,14 +370,14 @@ mt7601u_upload_firmware(struct mt7601u_dev *dev, const struct mt76_fw *fw)
 	}
 
 	ilm_len = le32_to_cpu(fw->hdr.ilm_len) - sizeof(fw->ivb);
-	dev_dbg(dev->dev, "loading FW - ILM %u + IVB %zu\n",
+	dev_info(dev->dev, "loading FW - ILM %u + IVB %zu\n",
 		ilm_len, sizeof(fw->ivb));
 	ret = mt7601u_dma_fw(dev, &dma_buf, fw->ilm, ilm_len, sizeof(fw->ivb));
 	if (ret)
 		goto error;
 
 	dlm_len = le32_to_cpu(fw->hdr.dlm_len);
-	dev_dbg(dev->dev, "loading FW - DLM %u\n", dlm_len);
+	dev_info(dev->dev, "loading FW - DLM %u\n", dlm_len);
 	ret = mt7601u_dma_fw(dev, &dma_buf, fw->ilm + ilm_len,
 			     dlm_len, MT_MCU_DLM_OFFSET);
 	if (ret)
@@ -396,7 +396,7 @@ mt7601u_upload_firmware(struct mt7601u_dev *dev, const struct mt76_fw *fw)
 		goto error;
 	}
 
-	dev_dbg(dev->dev, "Firmware running!\n");
+	dev_info(dev->dev, "Firmware running!\n");
 error:
 	kfree(ivb);
 	mt7601u_usb_free_buf(dev, &dma_buf);
@@ -467,6 +467,10 @@ static int mt7601u_load_firmware(struct mt7601u_dev *dev)
 	val = mt76_set(dev, MT_USB_DMA_CFG, MT_USB_DMA_CFG_TX_CLR);
 	val &= ~MT_USB_DMA_CFG_TX_CLR;
 	mt7601u_wr(dev, MT_USB_DMA_CFG, val);
+
+	printk("--> ? MT_USB_DMA_CFG: 0x%X\n", val);
+	val = mt7601u_rr(dev, MT_USB_DMA_CFG);
+	printk("--> ? MT_USB_DMA_CFG: 0x%X\n", val);
 
 	/* FCE tx_fs_base_ptr */
 	mt7601u_wr(dev, MT_TX_CPU_FROM_FCE_BASE_PTR, 0x400230);

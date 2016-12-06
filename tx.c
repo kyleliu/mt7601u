@@ -207,6 +207,9 @@ void mt7601u_tx(struct ieee80211_hw *hw, struct ieee80211_tx_control *control,
 	int pkt_len = skb->len;
 	int hw_q = skb2q(skb);
 
+	printk("--> %s: pkt_len=%d, q=%d, hw_q=%d\n", __func__,
+		pkt_len, skb_get_queue_mapping(skb), hw_q);
+
 	BUILD_BUG_ON(ARRAY_SIZE(info->status.status_driver_data) < 1);
 	info->status.status_driver_data[0] = (void *)(unsigned long)pkt_len;
 
@@ -240,6 +243,8 @@ void mt7601u_tx_stat(struct work_struct *work)
 	unsigned long flags;
 	int cleaned = 0;
 
+	printk("--> E %s\n", __func__);
+
 	while (!test_bit(MT7601U_STATE_REMOVED, &dev->state)) {
 		stat = mt7601u_mac_fetch_tx_status(dev);
 		if (!stat.valid)
@@ -262,6 +267,8 @@ void mt7601u_tx_stat(struct work_struct *work)
 	else
 		clear_bit(MT7601U_STATE_READING_STATS, &dev->state);
 	spin_unlock_irqrestore(&dev->tx_lock, flags);
+
+	printk("--> X %s\n", __func__);
 }
 
 int mt7601u_conf_tx(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
